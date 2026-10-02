@@ -29,6 +29,8 @@ Prakash is a full-stack web application (Python backend, real database, live upd
 
 Access is enforced on the server for every API route, not just hidden in the UI (see `tests/test_api.py`).
 
+**Links:** source <https://github.com/bharath050305/prakash> · demo video and report are attached to the [v1.0 release](https://github.com/bharath050305/prakash/releases/tag/v1.0).
+
 ## Run it
 
 You need Python 3.10+ (developed on 3.13). Open a terminal in this folder.
@@ -72,6 +74,7 @@ backend/
 frontend/                  single-page app (vanilla JS modules, Leaflet, Chart.js, no build step)
 tests/                     pytest suite + API smoke test
 demo_video/                narrated demo video, presentation script (.docx) and the scripts that make them
+docs/                      project report (.docx/.pdf), sheet entries, and the scripts that build the figures
 legacy-static/index.html   the original static prototype, kept for reference
 ```
 
