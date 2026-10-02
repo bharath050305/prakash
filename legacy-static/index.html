@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prakash – Smart Streetlight Maintenance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#EDF0F5;--surface:#FFFFFF;--surface2:#F4F6FA;--ink:#101A2D;--muted:#586479;--line:#DBE1EA;
+  --side:#0E1A33;--side2:#182A50;--side-ink:#B7C4DD;
+  --lamp:#F5A00B;--lamp-ink:#8A5300;--lamp-soft:#FFF0CC;
+  --ok:#0F8A72;--ok-soft:#DBF2EA;--warn:#D0620A;--warn-soft:#FFE8D0;--bad:#C9342F;--bad-soft:#FBDFDD;
+  --info:#2A66E0;--info-soft:#E0EAFD;--violet:#6B4FD3;--violet-soft:#E9E4FB;
+  --head:'Bricolage Grotesque','IBM Plex Sans',system-ui,sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+:root[data-theme="dark"]{
+  --bg:#080E1C;--surface:#111A31;--surface2:#16213D;--ink:#E8EDF7;--muted:#93A1BB;--line:#22304F;
+  --side:#060B17;--side2:#111C38;--side-ink:#98A9C8;
+  --lamp:#FFB21F;--lamp-ink:#FFC963;--lamp-soft:#3A2A0A;
+  --ok:#3CCFAE;--ok-soft:#0F3A33;--warn:#FF9A3D;--warn-soft:#402508;--bad:#FF6B67;--bad-soft:#40181A;
+  --info:#7AA2FF;--info-soft:#172C57;--violet:#A996FF;--violet-soft:#282050;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#080E1C;--surface:#111A31;--surface2:#16213D;--ink:#E8EDF7;--muted:#93A1BB;--line:#22304F;
+    --side:#060B17;--side2:#111C38;--side-ink:#98A9C8;
+    --lamp:#FFB21F;--lamp-ink:#FFC963;--lamp-soft:#3A2A0A;
+    --ok:#3CCFAE;--ok-soft:#0F3A33;--warn:#FF9A3D;--warn-soft:#402508;--bad:#FF6B67;--bad-soft:#40181A;
+    --info:#7AA2FF;--info-soft:#172C57;--violet:#A996FF;--violet-soft:#282050;
+  }
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 14px/1.5 'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--info);outline-offset:2px;border-radius:6px}
+h1,h2,h3{font-family:var(--head);margin:0;letter-spacing:-.01em}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+
+/* sidebar */
+.side{background:var(--side);color:var(--side-ink);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:18px 12px;gap:6px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;color:#fff}
+.brand .logo{width:36px;height:36px;border-radius:50%;background:var(--lamp);display:grid;place-items:center;color:#2B1A00;box-shadow:0 0 0 5px rgba(245,160,11,.16),0 0 24px rgba(245,160,11,.45)}
+.brand b{font:700 19px var(--head);display:block;line-height:1.1}
+.brand span{font-size:11.5px;color:var(--side-ink)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav button{display:flex;align-items:center;gap:11px;background:none;border:0;padding:9px 10px;border-radius:9px;color:var(--side-ink);text-align:left;font-weight:500;position:relative}
+.nav button:hover{background:var(--side2);color:#fff}
+.nav button[aria-current="page"]{background:var(--side2);color:#fff}
+.nav button[aria-current="page"]::before{content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--lamp)}
+.nav svg{width:18px;height:18px;flex:none}
+.badge{margin-left:auto;background:var(--bad);color:#fff;border-radius:999px;font-size:11px;font-weight:600;padding:0 7px;min-width:20px;text-align:center}
+.side-foot{margin-top:auto;padding:12px;border:1px solid var(--side2);border-radius:12px;font-size:12px;line-height:1.45}
+.side-foot b{color:#fff;font-weight:600;display:block;font-size:13px}
+.side-foot button{margin-top:8px;background:none;border:0;color:var(--lamp);padding:0;font-size:12px;text-decoration:underline;text-underline-offset:3px}
+
+/* main */
+main{padding:22px 26px 40px;min-width:0}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.top h1{font-size:26px;font-weight:700}
+.top p{margin:2px 0 0;color:var(--muted)}
+.tools{display:flex;gap:8px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-weight:500;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(15,138,114,.6);animation:ping 1.8s infinite}
+.pill.off .dot{background:var(--muted);animation:none}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center}
+.icon-btn svg{width:17px;height:17px}
+@keyframes ping{70%{box-shadow:0 0 0 7px rgba(15,138,114,0)}100%{box-shadow:0 0 0 0 rgba(15,138,114,0)}}
+
+/* generic */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.card.pad0{padding:0;overflow:hidden}
+.card h3{font-size:16px;font-weight:600}
+.sub{color:var(--muted);font-size:12.5px;margin:2px 0 0}
+.grid{display:grid;gap:14px;margin-top:14px}
+.grid.main{grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr)}
+.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}.wrap{flex-wrap:wrap}
+.chead{padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:500;white-space:nowrap}
+.c-crit{background:var(--bad-soft);color:var(--bad)}.c-high{background:var(--warn-soft);color:var(--warn)}
+.c-med{background:var(--lamp-soft);color:var(--lamp-ink)}.c-low{background:var(--ok-soft);color:var(--ok)}
+.c-info{background:var(--info-soft);color:var(--info)}.c-mute{background:var(--surface2);color:var(--muted);border:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--surface2);flex-wrap:wrap}
+.seg button{border:0;background:none;padding:6px 12px;font-size:13px;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:8px 14px;font-weight:500}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--lamp);border-color:var(--lamp);color:#2B1A00;font-weight:600}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.small{padding:4px 10px;font-size:12.5px}
+.btn:disabled{opacity:.5;cursor:default}
+.mono{font-family:var(--mono);font-size:12.5px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:12.5px;padding:8px 10px;border-bottom:1px solid var(--line)}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.bar{height:7px;background:var(--surface2);border-radius:99px;overflow:hidden;min-width:70px}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--lamp)}
+.empty{padding:34px 16px;text-align:center;color:var(--muted)}
+
+/* kpis */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.kpi{padding:14px 18px;border-right:1px solid var(--line)}
+.kpi:last-child{border-right:0}
+.kpi span{color:var(--muted);font-size:12.5px}
+.kpi b{display:block;font:700 30px/1.15 var(--head);margin:2px 0}
+.kpi small{color:var(--muted);font-size:12.5px}
+.kpi .bar{margin-top:6px}
+
+/* map */
+.mapwrap{position:relative;background:#0A1326;border-top:1px solid #1B2A4A}
+.mapwrap svg{display:block;width:100%;height:auto}
+.mapwrap text{font-family:'IBM Plex Sans',sans-serif}
+.tip{position:absolute;pointer-events:none;background:#0E1A33;color:#E8EDF7;border:1px solid #2A3B63;padding:8px 10px;border-radius:8px;font-size:12px;z-index:5;min-width:170px;display:none;line-height:1.45}
+.sel{position:absolute;left:12px;bottom:12px;background:#0E1A33ee;color:#E8EDF7;border:1px solid #2A3B63;border-radius:10px;padding:10px 12px;font-size:12.5px;max-width:300px;z-index:4}
+.sel button{position:absolute;top:4px;right:6px;background:none;border:0;color:#93A1BB;font-size:16px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;padding:10px 16px;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 1.9s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.7);opacity:.75}100%{transform:scale(2.7);opacity:0}}
+@keyframes dash{to{stroke-dashoffset:-24}}
+.route{animation:dash 1.4s linear infinite}
+
+/* feed */
+.feed{max-height:600px;overflow:auto;margin:0 -16px;padding:0}
+.fi{padding:11px 16px;border-top:1px solid var(--line);display:block;width:100%;text-align:left;background:none;border-left:0;border-right:0;border-bottom:0}
+.fi:hover{background:var(--surface2)}
+.fi p{margin:4px 0 6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:13.5px}
+.fi .meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ch{font:500 11.5px var(--mono);color:var(--muted)}
+.fi.new{animation:flash 2.2s ease-out}
+@keyframes flash{0%{background:var(--lamp-soft)}100%{background:transparent}}
+.chartbox{position:relative;height:240px;margin-top:10px}
+
+/* analyzer */
+.an{grid-template-columns:minmax(0,1.2fr) minmax(300px,1fr)}
+textarea{width:100%;margin:12px 0 8px;background:var(--surface2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px;font:400 15px/1.55 'IBM Plex Sans',sans-serif;resize:vertical;min-height:112px}
+.samples{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.samples button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 11px;font-size:12.5px;color:var(--muted)}
+.samples button:hover{color:var(--ink);border-color:var(--muted)}
+.steps{list-style:none;margin:10px 0 0;padding:0}
+.steps li{display:grid;grid-template-columns:22px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line);color:var(--muted)}
+.steps li:last-child{border:0}
+.steps .tick{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:11px}
+.steps li.done{color:var(--ink)}
+.steps li.done .tick{background:var(--ok);border-color:var(--ok);color:#fff}
+.steps li.run .tick{border-color:var(--lamp);border-top-color:transparent;animation:spin .7s linear infinite}
+.steps li b{font-weight:500}
+.steps li em{font-style:normal;font-family:var(--mono);font-size:12px;color:var(--ink)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hltext{font-size:16px;line-height:2.1;margin:10px 0 4px}
+mark.ent{background:none;border-radius:6px;padding:2px 4px;border-bottom:2px solid}
+mark.ent small{font:500 10px var(--mono);margin-left:4px;opacity:.85}
+.e-POLE_ID{background:var(--info-soft);border-color:var(--info);color:var(--info)}
+.e-LOCATION{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.e-LANDMARK{background:var(--violet-soft);border-color:var(--violet);color:var(--violet)}
+.e-DURATION{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.e-FAULT{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.prob{display:grid;grid-template-columns:150px 1fr 44px;gap:10px;align-items:center;margin:9px 0;font-size:13px}
+.prob .bar{height:9px}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13.5px;margin-top:10px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.reply{background:var(--surface2);border:1px solid var(--line);border-left:3px solid var(--ok);border-radius:8px;padding:10px 12px;font-size:13.5px;margin-top:10px}
+.note{border-radius:8px;padding:9px 12px;font-size:13px;margin-top:10px}
+.note.info{background:var(--info-soft);color:var(--info)}.note.warn{background:var(--warn-soft);color:var(--warn)}
+ul.why{margin:8px 0 0;padding-left:18px;font-size:13px;color:var(--muted)}
+
+/* schedule */
+.tech{border-left:4px solid var(--c);}
+.tech ol{margin:8px 0 0;padding-left:0;list-style:none}
+.tech li{display:grid;grid-template-columns:24px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.tech li .n{width:22px;height:22px;border-radius:50%;background:var(--c);color:#0A1326;font:600 12px var(--head);display:grid;place-items:center}
+.cmp td:nth-child(n+2){font-family:var(--mono);font-size:13px}
+.good{color:var(--ok);font-weight:600}
+
+/* alerts */
+.alert{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:13px 16px;border-top:1px solid var(--line)}
+.alert:first-child{border-top:0}
+.alert.ack{opacity:.5}
+.alert h4{margin:0;font-size:14px;font-weight:600}
+.alert p{margin:1px 0 0;color:var(--muted);font-size:13px}
+
+/* architecture */
+.flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:22px;margin-top:14px;position:relative}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;position:relative}
+.stage:not(:last-child)::after{content:"";position:absolute;right:-22px;top:50%;width:22px;height:2px;background:var(--lamp)}
+.stage h3{font-size:15px;margin-bottom:8px;color:var(--ink)}
+.stage li{margin:4px 0;font-size:13px;color:var(--muted)}
+.stage ul{margin:0;padding-left:16px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+
+/* toast */
+#toasts{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px;z-index:50}
+.toast{background:var(--ink);color:var(--surface);padding:10px 14px;border-radius:10px;font-size:13.5px;max-width:340px;animation:in .25s ease-out}
+@keyframes in{from{transform:translateY(8px);opacity:0}}
+
+@media (max-width:1100px){.grid.main,.grid.two,.an,.grid.three{grid-template-columns:minmax(0,1fr)}.flow{grid-template-columns:minmax(0,1fr);gap:26px}.stage:not(:last-child)::after{right:auto;left:50%;top:auto;bottom:-26px;width:2px;height:26px}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.kpi:nth-child(2){border-right:0}.kpi:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:40;border-top:1px solid var(--side2)}
+  .brand,.side-foot{display:none}
+  .nav{flex-direction:row;width:100%;justify-content:space-between}
+  .nav button{flex-direction:column;gap:2px;font-size:10.5px;padding:6px 4px;flex:1;align-items:center;text-align:center}
+  .nav button[aria-current="page"]::before{display:none}
+  .nav .badge{position:absolute;top:0;right:8px;margin:0;font-size:10px;padding:0 5px;min-width:16px}
+  main{padding:16px 14px 92px}
+  .top h1{font-size:22px}
+  .prob{grid-template-columns:110px 1fr 40px}
+  #toasts{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
+@media (max-width:520px){.kpi b{font-size:24px}.kpi{padding:12px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="Main navigation">
+    <div class="brand">
+      <div class="logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h6M10 21V7a4 4 0 0 1 4-4h3"/><path d="M15 3h5v4h-5z" fill="currentColor"/></svg></div>
+      <div><b>Prakash</b><span>Streetlight maintenance</span></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot"><b>Group 6 · SDG 11</b>Sustainable cities and communities. Prototype running on synthetic data.<br><button id="reset">Reset demo data</button></div>
+  </aside>
+  <main>
+    <header class="top">
+      <div><h1 id="pgTitle"></h1><p id="pgSub"></p></div>
+      <div class="tools">
+        <button class="pill" id="liveBtn" aria-pressed="true" title="Simulate new complaints arriving"><span class="dot"></span><span id="liveTxt">Live intake</span></button>
+        <button class="icon-btn" id="themeBtn" aria-label="Switch colour theme"></button>
+      </div>
+    </header>
+    <div id="view"></div>
+  </main>
+</div>
+<div id="toasts" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ───────────── helpers ───────────── */
+const $=(s,e=document)=>e.querySelector(s), $$=(s,e=document)=>[...e.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const ago=ts=>{const m=Math.max(0,Math.round((Date.now()-ts)/60000));return m<1?'just now':m<60?m+' min ago':m<1440?Math.round(m/60)+' h ago':Math.round(m/1440)+' d ago'};
+const fmtClock=m=>{m=Math.round(m);const h=Math.floor(m/60)%24,mm=String(m%60).padStart(2,'0');return (h%12||12)+':'+mm+' '+(h<12?'AM':'PM')};
+const IC={
+ overview:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+ analyze:'<path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/>',
+ hotspots:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+ predict:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+ schedule:'<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/>',
+ alerts:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/>',
+ arch:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+ moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
+};
+const ic=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+
+/* ───────────── city model ───────────── */
+const ZONES=[
+ {id:'airoli',code:'AIR',name:'Airoli',x:392,y:70,w:.9,re:/airoli|ऐरोली/i,lm:['Airoli Bridge','Sector 5']},
+ {id:'ghansoli',code:'GHA',name:'Ghansoli',x:410,y:150,w:1.0,re:/ghansoli|घनसोली/i,lm:['Ghansoli Station','Sector 3']},
+ {id:'vashi',code:'VSH',name:'Vashi',x:332,y:226,w:1.2,re:/vashi|वाशी/i,lm:['Vashi Station','Inorbit Mall']},
+ {id:'sanpada',code:'SNP',name:'Sanpada',x:392,y:292,w:1.1,re:/sanpada|सानपाडा/i,lm:['Sanpada Station','Palm Beach Road']},
+ {id:'nerul',code:'NER',name:'Nerul',x:352,y:360,w:1.4,re:/nerul|नेरुल|नेरूळ/i,lm:['SIES College','DY Patil Stadium']},
+ {id:'seawoods',code:'SEA',name:'Seawoods',x:302,y:420,w:.8,re:/seawoods|सीवुड्स|सीवूड्स/i,lm:['Seawoods Grand Central','Sector 44']},
+ {id:'belapur',code:'BEL',name:'Belapur',x:372,y:470,w:.9,re:/belapur|बेलापुर|बेलापूर/i,lm:['Belapur Station','CBD Junction']},
+ {id:'kharghar',code:'KHR',name:'Kharghar',x:560,y:455,w:1.2,re:/kharghar|खारघर/i,lm:['Kharghar Central Park','Utsav Chowk']}
+];
+const ZM=Object.fromEntries(ZONES.map(z=>[z.id,z]));
+const LANDMARKS=[
+ {n:'SIES College',re:/\bsies( college| graduate school)?( nerul)?/i,zone:'nerul',dx:-16,dy:12},
+ {n:'DY Patil Stadium',re:/d\.?\s?y\.?\s?patil( stadium)?/i,zone:'nerul',dx:22,dy:14},
+ {n:'Inorbit Mall',re:/(vashi\s+)?inorbit( mall)?/i,zone:'vashi',dx:36,dy:8},
+ {n:'Vashi Station',re:/vashi (railway )?station|वाशी स्टेशन/i,zone:'vashi',dx:-6,dy:-4},
+ {n:'APMC Market',re:/apmc( market)?/i,zone:'vashi',dx:60,dy:10},
+ {n:'Palm Beach Road',re:/palm beach( road)?/i,zone:'sanpada',dx:-88,dy:10},
+ {n:'Sanpada Station',re:/sanpada (railway )?station/i,zone:'sanpada',dx:14,dy:-6},
+ {n:'Nerul Station',re:/nerul (railway )?station|नेरुल स्टेशन|नेरूळ स्टेशन/i,zone:'nerul',dx:4,dy:-8},
+ {n:'Seawoods Grand Central',re:/(seawoods\s+)?grand central/i,zone:'seawoods',dx:20,dy:-10},
+ {n:'Kharghar Central Park',re:/(kharghar\s+)?central park/i,zone:'kharghar',dx:-30,dy:6},
+ {n:'Utsav Chowk',re:/(kharghar\s+)?utsav( chowk)?/i,zone:'kharghar',dx:40,dy:-8},
+ {n:'Belapur Station',re:/belapur (railway )?station|cbd/i,zone:'belapur',dx:0,dy:-12},
+ {n:'Airoli Bridge',re:/airoli bridge|ऐरोली ब्रिज/i,zone:'airoli',dx:30,dy:8},
+ {n:'Ghansoli Station',re:/ghansoli (railway )?station/i,zone:'ghansoli',dx:-12,dy:6}
+];
+const ROADS=[
+ [[400,10],[392,70],[410,150],[372,200],[332,226],[382,268],[392,292],[352,360],[302,420],[372,470],[560,455],[740,430]],
+ [[248,220],[300,300],[312,360],[262,420],[282,510]],
+ [[332,226],[450,236],[600,220],[745,242]],
+ [[392,292],[520,312],[650,300],[745,322]],
+ [[352,360],[480,382],[620,370],[745,392]],
+ [[410,150],[520,140],[640,152],[745,132]],
+ [[392,70],[520,82],[650,60],[745,72]],
+ [[302,420],[430,408],[560,455]]
+];
+const CLASSES={
+ outage:{label:'Lamp not working',color:'#E5484D',dept:'Field maintenance',parts:'Lamp / LED driver',base:35,mins:30,crew:'Standard crew'},
+ flicker:{label:'Flickering',color:'#F28A2E',dept:'Field maintenance',parts:'Driver, connector check',base:25,mins:25,crew:'Standard crew'},
+ dayburn:{label:'Burning in daytime',color:'#9B7BFF',dept:'Control and automation',parts:'Photocell / timer relay',base:15,mins:20,crew:'Standard crew'},
+ hazard:{label:'Electrical or pole hazard',color:'#FF4D6A',dept:'Electrical safety crew',parts:'Cable, junction box, pole clamp',base:75,mins:60,crew:'HV-certified electrician'},
+ dim:{label:'Dim light',color:'#D9A800',dept:'Field maintenance',parts:'Lamp replacement',base:18,mins:25,crew:'Standard crew'},
+ vandal:{label:'Damaged or stolen fixture',color:'#2CB89A',dept:'Field crew + police intimation',parts:'Fixture, cable',base:40,mins:45,crew:'Standard crew'},
+ timer:{label:'Controller / timer fault',color:'#5B9BFF',dept:'Control and automation',parts:'Controller, contactor',base:30,mins:35,crew:'Standard crew'},
+ cluster:{label:'Multiple-light outage',color:'#E45DB0',dept:'Feeder team',parts:'Feeder / MCB inspection',base:55,mins:75,crew:'Feeder team + bucket truck'}
+};
+const SLA={Critical:4,High:12,Medium:48,Low:96};
+const CHANNELS=['WhatsApp','Web portal','Call centre','X / Twitter','Email'];
+const TECHS=[
+ {id:'T1',name:'Ravi Patil',skill:'HV-certified electrician',hv:true,color:'#5B9BFF',depot:{x:326,y:232,zone:'Vashi'}},
+ {id:'T2',name:'Sneha Kulkarni',skill:'Electrician',hv:false,color:'#2CD3B5',depot:{x:356,y:352,zone:'Nerul'}},
+ {id:'T3',name:'Imran Shaikh',skill:'HV-certified + bucket truck',hv:true,color:'#FFB454',depot:{x:368,y:462,zone:'Belapur'}},
+ {id:'T4',name:'Priya Nair',skill:'Electrician',hv:false,color:'#C58BFF',depot:{x:396,y:78,zone:'Airoli'}}
+];
+const WEEKLY={actual:[19,21,18,24,22,27,31,29,26,24,28,30],fcst:[29,27,25,27,29,28],lo:[27,24,21,22,23,21],hi:[31,30,29,32,35,35]};
+const DAILY=[9,12,8,14,11,10,13,16,12,9,15,18,14,11];
+const FEAT=[['Lamp age',.27],['Faults in last 90 days',.24],['Supply voltage fluctuation',.16],['Rainfall (7-day)',.13],['Driver / ballast type',.10],['Burning hours',.06],['Pole condition',.04]];
+
+/* ───────────── NLP engine (rule-based stand-in for the trained models) ───────────── */
+const W={a:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7};
+const LEX={
+ outage:[[/not (working|glowing|lit|burning|on\b)|no light|isn'?t (working|on)|is (off|dead|out)|went off|gone off|switched off|not lighting|non[- ]?functional/i,1.6],[/band (hai|pada|padi|padli)|nahi (jal|chal)|andhera|अंधे?र|अंधार|बंद|नहीं जल/i,1.8],[/\bdark\b|darkness|pitch black/i,.8]],
+ flicker:[[/flicker|blink|on[- ]and[- ]off|on[- ]off|intermittent|strobe|jhilmil|fluctuat|flashing|flashes/i,2.4]],
+ dayburn:[[/day ?time|during the day|in the day|daylight|all day|24 ?(hrs|hours|x ?7)/i,1.8],[/(burning|glowing|lit)\b.{0,30}(day|morning)|(day|morning).{0,30}(burning|glowing)|not (switching|turning) off|always on|wasting (power|electricity)|din mein/i,2.2]],
+ hazard:[[/spark|exposed|live wire|hanging wire|wire (is )?hanging|hanging from|shock|electrocut|short[- ]?circuit|\bfire\b|smoke|burnt/i,2.6],[/(pole|post).{0,25}(lean|tilt|fall|fell|collaps|rust|broken|bent|damaged)|(leaning|tilted|fallen|collapsed|bent)\b.{0,25}(pole|post)/i,2.4],[/dangerous|risk of accident/i,1.2]],
+ dim:[[/\bdim\b|dimly|low light|faint|barely (visible|lit)|weak light|poor (light|illumination)|kam roshni|yellowish|insufficient/i,2.4]],
+ vandal:[[/broken (glass|cover|fixture|lamp)|glass (is )?broken|smash|stolen|theft|stole|vandal|missing (cover|lamp|fixture|cable)|cable (is )?(cut|stolen)|cover missing|chori/i,2.6]],
+ timer:[[/timer|photocell|sensor|controller|panel|feeder|\bmcb\b|not (turning|switching) on|automatic(ally)?|schedule|contactor/i,2.2]],
+ cluster:[[/\b(whole|entire)\b|all (the )?(street ?)?(lights|lamps|poles)|multiple|several|row of|stretch|\b\d{1,2} (street ?)?(lights|lamps|poles)\b|sabhi|saari|पूरी|सभी/i,2.3]]
+};
+function lang(t){if(/[\u0900-\u097F]/.test(t))return 'Hindi / Marathi';if(/\b(hai|nahi|band|andhera|batti|kripya|paas|raat|din mein|din se)\b/i.test(t))return 'Hinglish';return 'English'}
+function classify(t){
+  const sc={};for(const k in CLASSES){sc[k]=0;for(const [re,w] of LEX[k])if(re.test(t))sc[k]+=w}
+  sc.outage+=.6;const ks=Object.keys(sc),mx=Math.max(...ks.map(k=>sc[k]));
+  const ex=ks.map(k=>Math.exp((sc[k]-mx)*1.3)),z=ex.reduce((a,b)=>a+b,0);
+  return ks.map((k,i)=>({k,p:ex[i]/z})).sort((a,b)=>b.p-a.p);
+}
+function parseDur(t){
+  let d=0;
+  for(const m of t.matchAll(/\b(\d+|a|one|two|three|four|five|six|seven)\s+(hours?|days?|nights?|weeks?|months?)\b/gi)){
+    const n=isNaN(m[1])?W[m[1].toLowerCase()]:+m[1],u=m[2].toLowerCase();
+    d=Math.max(d,u.startsWith('week')?n*7:u.startsWith('month')?n*30:u.startsWith('hour')?n/24:n);
+  }
+  if(/since (yesterday|last night)/i.test(t))d=Math.max(d,1);
+  if(/last week/i.test(t))d=Math.max(d,7);
+  return d;
+}
+function severity(t,cls,dur){
+  let s=CLASSES[cls].base;const why=[`Base level for “${CLASSES[cls].label}”: ${s}`];
+  const add=(re,n,msg)=>{if(re.test(t)){s+=n;why.push(`${msg}: +${n}`)}};
+  if(cls!=='hazard')add(/spark|exposed|live wire|shock|\bfire\b|smoke|electrocut/i,25,'Electrical danger words');
+  add(/school|college|hospital|clinic|station|bus ?stop|crossing|junction|flyover|bridge|highway|market|temple|mall|stadium/i,10,'High-footfall or critical location');
+  add(/women|girls|ladies|unsafe|dangerous|robbery|snatch|accident|crime|harass|theft|chori/i,12,'Public-safety concern');
+  add(/child|kids|senior|elderly|patients?|students?/i,4,'Vulnerable road users');
+  add(/night|evening|after dark|raat|अंधे?र|अंधार/i,3,'Night-time impact');
+  if(dur>=7){s+=14;why.push(`Unresolved for ${Math.round(dur)}+ days: +14`)}else if(dur>=3){s+=8;why.push(`Unresolved for ${Math.round(dur)} days: +8`)}
+  s=Math.min(100,s);
+  return {score:s,label:s>=75?'Critical':s>=55?'High':s>=30?'Medium':'Low',why};
+}
+const STOP=new Set('keeps keep stopped goes going gone does doesn\'t dont is are was were has have had light lights lamp lamps streetlight streetlights street pole poles since for from not no and but which that please kindly plz it its on off working broken dark very too also as when because so'.split(' '));
+function ner(t){
+  const sp=[],add=(s,e,label)=>{if(e>s)sp.push({s,e,label,text:t.slice(s,e)})};
+  for(const m of t.matchAll(/\b(?:SL|LP|PL)[-\s#]?[A-Z]{0,3}[-\s]?\d{2,5}\b|\bpole\s*(?:no\.?|number|#)?\s*\d{1,5}\b/gi))add(m.index,m.index+m[0].length,'POLE_ID');
+  ZONES.forEach(z=>{for(const m of t.matchAll(new RegExp(z.re.source,'gi')))add(m.index,m.index+m[0].length,'LOCATION')});
+  for(const m of t.matchAll(/\bsec(?:tor)?[\s.-]*\d{1,2}[A-Z]?\b/gi))add(m.index,m.index+m[0].length,'LOCATION');
+  for(const m of t.matchAll(/\b(?:[A-Z][a-z]+\s){1,3}(?:Road|Rd|Marg|Chowk|Circle|Junction|Naka|Bridge|Flyover|Highway|Lane)\b/g))add(m.index,m.index+m[0].length,'LOCATION');
+  LANDMARKS.forEach(L=>{for(const m of t.matchAll(new RegExp(L.re.source,'gi')))add(m.index,m.index+m[0].length,'LANDMARK')});
+  for(const m of t.matchAll(/\b(?:near|opposite|opp|behind|beside|outside|in front of|next to|adjacent to|close to)\s+([\w&'-]+(?:\s+[\w&'-]+){0,3})/gi)){
+    const cap=m[1],base=m.index+m[0].length-cap.length,wre=/[\w&'-]+/g;let w,first=-1,end=-1,up=false;
+    while((w=wre.exec(cap))){const lw=w[0].toLowerCase();if(first<0&&(lw==='the'||lw==='a'))continue;if(STOP.has(lw))break;
+      if(first<0)up=/^[A-Z]/.test(w[0]);else if(up&&!/^[A-Z]/.test(w[0])&&!['of','and','&'].includes(lw))break;
+      if(first<0)first=w.index;end=w.index+w[0].length}
+    if(first>=0)add(base+first,base+end,'LANDMARK');
+  }
+  for(const m of t.matchAll(/\b(?:since |for |past )?(?:\d+|a|one|two|three|four|five|six|seven)\s+(?:hours?|days?|nights?|weeks?|months?)\b|\bsince (?:yesterday|last (?:night|week|month))\b/gi))add(m.index,m.index+m[0].length,'DURATION');
+  for(const m of t.matchAll(/flicker\w*|not working|not glowing|sparks?|exposed wire|hanging wire|leaning|\bdim\b|broken \w+|stolen|band hai|timer|no lights?|darkness|andhera|not (?:switching|turning) (?:on|off)|wire hanging|(?:exposed|hanging) wire|बंद|अंधे?रा|अंधार/gi))add(m.index,m.index+m[0].length,'FAULT');
+  sp.sort((a,b)=>a.s-b.s||(b.e-b.s)-(a.e-a.s));
+  const out=[];let end=-1;for(const x of sp)if(x.s>=end){out.push(x);end=x.e}
+  return out;
+}
+function geocode(t){
+  for(const L of LANDMARKS)if(L.re.test(t)){const z=ZM[L.zone];return {zone:z,x:z.x+L.dx,y:z.y+L.dy,conf:.95,by:'Landmark: '+L.n}}
+  for(const z of ZONES)if(z.re.test(t))return {zone:z,x:z.x,y:z.y,conf:.72,by:'Area name: '+z.name};
+  return null;
+}
+function nearestLamp(x,y,zone){
+  let best=null,bd=1e9;
+  for(const l of S.lamps){if(zone&&l.zone!==zone)continue;const pen=l.status==='ok'?0:60,d=Math.hypot(l.x-x,l.y-y)+pen;if(d<bd){bd=d;best=l}}
+  return best;
+}
+function analyze(text){
+  const t=text.trim(),probs=classify(t),cls=probs[0].k,ents=ner(t),dur=parseDur(t),sev=severity(t,cls,dur);
+  let g=geocode(t),lamp=null;
+  const pid=t.match(/\bSL[-\s]?([A-Z]{3})[-\s]?(\d{3})\b/i);
+  if(pid){lamp=LMAP.get(`SL-${pid[1].toUpperCase()}-${pid[2]}`);if(lamp)g={zone:ZM[lamp.zone],x:lamp.x,y:lamp.y,conf:.98,by:'Pole ID: '+lamp.id}}
+  if(!lamp&&g)lamp=nearestLamp(g.x,g.y,g.zone.id);
+  let dup=null;
+  const live=S.tickets.filter(k=>k.status!=='resolved'&&k.x!=null);
+  if(lamp)dup=live.find(k=>k.lampId===lamp.id)||null;
+  if(!dup&&g)dup=live.find(k=>k.zone===g.zone.id&&k.cls===cls&&Math.hypot(k.x-g.x,k.y-g.y)<28)||null;
+  return {text:t,lang:lang(t),probs,cls,conf:probs[0].p,ents,dur,sev,geo:g,lamp,dup};
+}
+
+/* ───────────── state + data ───────────── */
+const S={lamps:[],tickets:[],seq:1041,page:'overview',live:true,layers:{heat:true,lamps:true,clusters:true},hmode:'open',mode:'opt',ack:new Set(),prev:new Set(),theme:'light',an:{ch:'WhatsApp',text:''},lastNew:null};
+let LMAP=new Map();
+function initData(){
+  const R=rng(11);S.lamps=[];S.tickets=[];S.seq=1041;S.ack=new Set();S.prev=new Set();S.mode='opt';
+  const cnt={};
+  const nz=(x,y)=>ZONES.reduce((a,z)=>Math.hypot(z.x-x,z.y-y)<Math.hypot(a.x-x,a.y-y)?z:a);
+  ROADS.forEach(pts=>{let side=1;for(let i=0;i<pts.length-1;i++){
+    const [x1,y1]=pts[i],[x2,y2]=pts[i+1],dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy),ux=dx/len,uy=dy/len;
+    for(let d=12;d<len-4;d+=30){
+      const x=x1+ux*d-uy*7*side,y=y1+uy*d+ux*7*side;side=-side;
+      const z=nz(x,y);cnt[z.id]=(cnt[z.id]||0)+1;
+      const age=1+Math.floor(R()*11),f90=Math.round(R()*R()*5*z.w*1.6);
+      const fault=R()<Math.min(.4,.12*z.w*(.4+age/5));
+      S.lamps.push({id:`SL-${z.code}-${String(cnt[z.id]).padStart(3,'0')}`,x:+x.toFixed(1),y:+y.toFixed(1),zone:z.id,age,f90,status:fault?'fault':'ok'});
+    }}});
+  S.lamps.forEach(l=>{
+    const z=ZM[l.zone],a=.26*l.age,f=.5*l.f90,zz=1.1*(z.w-1)*2;
+    l.risk=1/(1+Math.exp(-(-3.4+a+f+zz+(l.status!=='ok'?.4:0))));
+    l.reason=a>=f&&a>=zz?`Lamp is ${l.age} years old`:f>=zz?`${l.f90} faults in the last 90 days`:'Unstable supply in this zone';
+  });
+  LMAP=new Map(S.lamps.map(l=>[l.id,l]));
+  const TPL={
+   outage:['Streetlight not working near {lm}. Very dark at night.','{lm} pe streetlight band hai, andhera rehta hai. Please fix.','Street light is off since {d} days near {lm}, {zone}.','Lamp post at {lm} is not glowing. Pole no. {p}.'],
+   flicker:['The light near {lm} keeps flickering on and off, {zone}.','Streetlight flickering since {d} days at {lm}. Pole {p}.'],
+   dayburn:['Street light near {lm} is burning during the day, wasting electricity.','Streetlights on in daytime at {lm}, {zone}. Not switching off since morning.'],
+   hazard:['Exposed wire hanging from the pole near {lm}! Sparks seen after rain.','Streetlight pole leaning dangerously near {lm}, {zone}. Risk of accident.'],
+   dim:['Light near {lm} is very dim, barely visible for {d} days.','Poor illumination at {lm}, {zone}. Lamp looks faint.'],
+   vandal:['Streetlight glass broken and cover missing near {lm}.','Cable stolen from lamp post near {lm}, {zone}. Light is not working.'],
+   timer:['Streetlights near {lm} are not turning on automatically, looks like a timer problem.','Controller panel issue near {lm}: lights not switching on at schedule.'],
+   cluster:['Entire road near {lm} in {zone} has no streetlights, {d} lights are off.','Multiple streetlights not working in the whole stretch near {lm}. Women feel unsafe at night.']
+  };
+  const WT=[['outage',30],['flicker',18],['dim',10],['dayburn',8],['vandal',8],['timer',8],['cluster',8],['hazard',10]];
+  const pickCls=()=>{let r=R()*100;for(const [k,w] of WT){if((r-=w)<0)return k}return 'outage'};
+  const pick=a=>a[Math.floor(R()*a.length)];
+  const wchan=()=>{const r=R();return r<.4?'WhatsApp':r<.62?'Web portal':r<.78?'Call centre':r<.9?'X / Twitter':'Email'};
+  const fill=(s,l)=>{const z=ZM[l.zone];return s.replace('{lm}',pick(z.lm)).replace('{zone}',z.name).replace('{d}',2+Math.floor(R()*6)).replace('{p}',10+Math.floor(R()*200))};
+  const mk=(l,status,mins)=>{
+    const wc=pickCls();
+    const text=fill(pick(TPL[wc]),l),a=analyze(text),ts=Date.now()-mins*60000;
+    S.tickets.push({id:'TKT-'+(S.seq++),ts,channel:wchan(),text,cls:a.cls,conf:a.conf,sev:a.sev.score,sevLabel:a.sev.label,zone:l.zone,x:l.x,y:l.y,lampId:l.id,status,due:ts+SLA[a.sev.label]*36e5});
+  };
+  S.lamps.filter(l=>l.status==='fault').forEach(l=>mk(l,'open',20+Math.floor(R()*R()*4200)));
+  S.lamps.filter(l=>l.status==='ok').slice(0,9).forEach((l,i)=>mk(l,'resolved',1500+i*300));
+  [['Street light not working near the temple, please fix ASAP','Email',300],['Light is off in our lane since 2 days. Kindly fix.','Web portal',95],['Lamp flickering outside the school gate, please help','WhatsApp',40]].forEach(([tx,ch,m])=>{
+    const a=analyze(tx),t=makeTicket(a,ch);t.ts=Date.now()-m*60000;t.due=t.ts+SLA[a.sev.label]*36e5;
+  });
+  S.tickets.sort((a,b)=>b.ts-a.ts);
+  const pl=S.lamps.find(l=>l.zone==='nerul'&&l.status==='ok');
+  if(pl)SAMPLES[4][1]=`${pl.id} not glowing near D Y Patil Stadium`;
+}
+function nearestZone(x,y){return ZONES.reduce((a,z)=>Math.hypot(z.x-x,z.y-y)<Math.hypot(a.x-x,a.y-y)?z:a)}
+function clusters(){
+  const f=S.lamps.filter(l=>l.status!=='ok'),seen=new Set(),out=[];
+  f.forEach(a=>{
+    if(seen.has(a.id))return;const q=[a],comp=[];seen.add(a.id);
+    while(q.length){const c=q.pop();comp.push(c);f.forEach(b=>{if(!seen.has(b.id)&&Math.hypot(b.x-c.x,b.y-c.y)<=62){seen.add(b.id);q.push(b)}})}
+    if(comp.length>=3){const cx=comp.reduce((s,p)=>s+p.x,0)/comp.length,cy=comp.reduce((s,p)=>s+p.y,0)/comp.length;
+      out.push({x:cx,y:cy,r:Math.min(95,Math.max(...comp.map(p=>Math.hypot(p.x-cx,p.y-cy)))+18),n:comp.length,zone:nearestZone(cx,cy)})}
+  });
+  return out.sort((a,b)=>b.n-a.n);
+}
+function zoneStats(){
+  return ZONES.map(z=>{const L=S.lamps.filter(l=>l.zone===z.id);return {z,n:L.length,open:L.filter(l=>l.status!=='ok').length,f90:L.reduce((a,l)=>a+l.f90,0),risk:L.length?L.reduce((a,l)=>a+l.risk,0)/L.length:0,riskSum:L.reduce((a,l)=>a+l.risk,0)}});
+}
+const openT=()=>S.tickets.filter(t=>t.status==='open'||t.status==='assigned'||t.status==='review');
+function makeTicket(a,channel){
+  const ts=Date.now(),id='TKT-'+(S.seq++);
+  const t={id,ts,channel,text:a.text,cls:a.cls,conf:a.conf,sev:a.sev.score,sevLabel:a.sev.label,zone:a.geo?a.geo.zone.id:null,x:a.lamp?a.lamp.x:a.geo?a.geo.x:null,y:a.lamp?a.lamp.y:a.geo?a.geo.y:null,lampId:a.lamp?a.lamp.id:null,status:a.geo?'open':'review',due:ts+SLA[a.sev.label]*36e5};
+  if(a.lamp&&a.lamp.status==='ok'){a.lamp.status='fault';a.lamp.f90++}
+  S.tickets.unshift(t);return t;
+}
+
+/* ───────────── map ───────────── */
+function mapSVG(o={}){
+  const id=o.id||'m',layers=o.layers||{heat:true,lamps:true,clusters:true};
+  const stats=zoneStats();
+  let s=`<svg viewBox="0 0 760 540" role="img" aria-label="Map of streetlights across eight city zones"><defs>
+   <radialGradient id="hg${id}"><stop offset="0" stop-color="#FF4D4D" stop-opacity=".62"/><stop offset=".55" stop-color="#FF8A3D" stop-opacity=".22"/><stop offset="1" stop-color="#FF8A3D" stop-opacity="0"/></radialGradient>
+   <radialGradient id="rg${id}"><stop offset="0" stop-color="#9B7BFF" stop-opacity=".6"/><stop offset=".55" stop-color="#7B5CFF" stop-opacity=".2"/><stop offset="1" stop-color="#7B5CFF" stop-opacity="0"/></radialGradient></defs>`;
+  s+=`<path d="M0 0H205C222 90 190 165 214 232C238 300 190 385 216 462L232 540H0Z" fill="#0B2A4A"/><text x="60" y="270" fill="#4B78A8" font-size="13" font-style="italic">Thane Creek</text>`;
+  s+=`<ellipse cx="560" cy="360" rx="70" ry="34" fill="#0F2A2A"/><ellipse cx="640" cy="215" rx="55" ry="22" fill="#0F2A2A"/><ellipse cx="520" cy="215" rx="40" ry="18" fill="#0F2A2A" opacity=".7"/>`;
+  ROADS.forEach((r,i)=>{s+=`<path d="M${r.map(p=>p.join(' ')).join('L')}" stroke="#1C2D50" stroke-width="${i?8:12}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`});
+  if(layers.heat){
+    stats.forEach(st=>{
+      const v=o.hmode==='recurring'?st.f90/6:o.hmode==='risk'?st.riskSum/2.2:st.open;
+      if(v<=0)return;
+      s+=`<circle cx="${st.z.x}" cy="${st.z.y}" r="${Math.min(120,34+v*9)}" fill="url(#${o.hmode==='risk'?'rg':'hg'}${id})" opacity="${Math.min(1,.4+v*.1).toFixed(2)}"/>`;
+    });
+  }
+  if(layers.clusters)clusters().forEach(c=>{s+=`<circle cx="${c.x.toFixed(0)}" cy="${c.y.toFixed(0)}" r="${c.r.toFixed(0)}" fill="none" stroke="#FFB21F" stroke-width="1.4" stroke-dasharray="5 4" opacity=".85"/><text x="${(c.x+c.r*.7).toFixed(0)}" y="${(c.y-c.r*.7).toFixed(0)}" font-size="11.5" font-weight="600" fill="none" stroke="#0A1326" stroke-width="3.4" stroke-linejoin="round">${c.n} faults</text><text x="${(c.x+c.r*.7).toFixed(0)}" y="${(c.y-c.r*.7).toFixed(0)}" font-size="11.5" font-weight="600" fill="#FFB21F">${c.n} faults</text>`});
+  if(layers.lamps)S.lamps.forEach(l=>{
+    const ok=l.status==='ok',asg=l.status==='assigned';
+    s+=`<g data-lamp="${l.id}" style="cursor:pointer"><circle cx="${l.x}" cy="${l.y}" r="9" fill="transparent"/>`;
+    if(ok)s+=`<circle cx="${l.x}" cy="${l.y}" r="6.5" fill="#F5A00B" opacity=".14"/><circle cx="${l.x}" cy="${l.y}" r="2.5" fill="#FFD27A"/>`;
+    else if(asg)s+=`<circle cx="${l.x}" cy="${l.y}" r="7" fill="none" stroke="#2CD3B5" stroke-width="1.5"/><circle cx="${l.x}" cy="${l.y}" r="3.4" fill="#2CD3B5"/>`;
+    else s+=`<circle class="pulse" cx="${l.x}" cy="${l.y}" r="6" fill="#FF4D4D"/><circle cx="${l.x}" cy="${l.y}" r="3.7" fill="#FF5A5A" stroke="#fff" stroke-width=".9"/>`;
+    s+='</g>';
+  });
+  ZONES.forEach(z=>{const a=`x="${z.x+14}" y="${z.y-12}" font-size="12.5" font-weight="500"`;s+=`<text ${a} fill="none" stroke="#0A1326" stroke-width="3.6" stroke-linejoin="round">${z.name}</text><text ${a} fill="#A9BAD9">${z.name}</text>`});
+  if(o.routes)o.routes.forEach(r=>{
+    if(!r.jobs.length)return;
+    const pts=[r.depot,...r.jobs,r.depot];
+    s+=`<polyline class="route" points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="${r.color}" stroke-width="2.6" stroke-dasharray="8 6" stroke-linejoin="round" opacity=".95"/>`;
+    s+=`<rect x="${r.depot.x-8}" y="${r.depot.y-8}" width="16" height="16" rx="3" fill="${r.color}" stroke="#0A1326" stroke-width="2"/><text x="${r.depot.x}" y="${r.depot.y+4}" text-anchor="middle" font-size="10" font-weight="700" fill="#0A1326">${r.name[0]}</text>`;
+    r.jobs.forEach((j,i)=>{s+=`<circle cx="${j.x}" cy="${j.y}" r="9" fill="${r.color}" stroke="#0A1326" stroke-width="2"/><text x="${j.x}" y="${j.y+4}" text-anchor="middle" font-size="11" font-weight="700" fill="#0A1326">${i+1}</text>`});
+  });
+  if(o.mark){const m=o.mark;s+=`<circle class="pulse" cx="${m.x}" cy="${m.y}" r="10" fill="#2CD3B5"/><circle cx="${m.x}" cy="${m.y}" r="9" fill="none" stroke="#2CD3B5" stroke-width="2"/><path d="M${m.x} ${m.y-9}v-22" stroke="#2CD3B5" stroke-width="2"/><rect x="${m.x-58}" y="${m.y-56}" width="116" height="22" rx="6" fill="#2CD3B5"/><text x="${m.x}" y="${m.y-41}" text-anchor="middle" font-size="12" font-weight="600" fill="#052A22">Detected location</text>`}
+  return s+'</svg>';
+}
+const STATUS_TXT={ok:'Working',fault:'Faulty',assigned:'Crew assigned'};
+function bindMap(wrap){
+  const tip=wrap.querySelector('.tip');
+  wrap.addEventListener('mousemove',e=>{
+    const g=e.target.closest('[data-lamp]');if(!g){tip.style.display='none';return}
+    const l=LMAP.get(g.dataset.lamp);if(!l)return;
+    const t=S.tickets.find(k=>k.lampId===l.id&&k.status!=='resolved');
+    tip.innerHTML=`<b class="mono">${l.id}</b><br>${STATUS_TXT[l.status]} · ${ZM[l.zone].name}<br>Age ${l.age} y · ${l.f90} faults in 90 days`+(t?`<br><span style="color:#FFB21F">${CLASSES[t.cls].label}</span>`:'');
+    const r=wrap.getBoundingClientRect();tip.style.display='block';
+    tip.style.left=Math.min(r.width-190,e.clientX-r.left+14)+'px';tip.style.top=Math.max(4,e.clientY-r.top-10)+'px';
+  });
+  wrap.addEventListener('mouseleave',()=>tip.style.display='none');
+  wrap.addEventListener('click',e=>{
+    const g=e.target.closest('[data-lamp]');const old=wrap.querySelector('.sel');if(old)old.remove();
+    if(!g)return;const l=LMAP.get(g.dataset.lamp);if(!l)return;
+    const t=S.tickets.find(k=>k.lampId===l.id&&k.status!=='resolved');
+    const d=document.createElement('div');d.className='sel';
+    d.innerHTML=`<button aria-label="Close">×</button><b class="mono">${l.id}</b> · ${STATUS_TXT[l.status]}<br>${ZM[l.zone].name} · ${l.age} years old · predicted 14-day failure risk ${Math.round(l.risk*100)}%`+(t?`<br>${t.id}: ${CLASSES[t.cls].label} (${t.sevLabel})`:'');
+    d.querySelector('button').onclick=()=>d.remove();wrap.appendChild(d);
+  });
+}
+const legend=`<div class="legend"><span><i style="background:#FFD27A"></i>Working</span><span><i style="background:#FF5A5A"></i>Faulty</span><span><i style="background:#2CD3B5"></i>Crew assigned</span><span><i style="background:#FFB21F"></i>Hotspot cluster</span></div>`;
+
+/* ───────────── charts ───────────── */
+let CHARTS=[];
+function mkChart(el,cfg){
+  if(!window.Chart||!el)return null;
+  const cs=getComputedStyle(document.documentElement);
+  Chart.defaults.color=cs.getPropertyValue('--muted').trim();Chart.defaults.font.family="'IBM Plex Sans',sans-serif";Chart.defaults.borderColor=cs.getPropertyValue('--line').trim();
+  cfg.options=Object.assign({responsive:true,maintainAspectRatio:false},cfg.options||{});
+  const c=new Chart(el,cfg);CHARTS.push(c);return c;
+}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ───────────── shared ui bits ───────────── */
+const sevCls=l=>({Critical:'c-crit',High:'c-high',Medium:'c-med',Low:'c-low'}[l]);
+const sevChip=l=>`<span class="chip ${sevCls(l)}">${l}</span>`;
+function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;$('#toasts').appendChild(d);setTimeout(()=>d.remove(),4200)}
+const PAGES={
+ overview:['Operations overview','Complaints, faults and crews across the city right now','overview'],
+ analyze:['Complaint analyzer','See how one citizen message becomes a classified, located, prioritised ticket','analyze'],
+ hotspots:['Hotspots','Where faults cluster and which areas keep failing','hotspots'],
+ predict:['Predictive maintenance','Which lamps are likely to fail next and how many faults to expect','predict'],
+ schedule:['Crew scheduling','Turn open tickets into routes that fix the urgent ones first','schedule'],
+ alerts:['Alerts','Things that need someone’s attention today','alerts'],
+ arch:['System design','How complaints flow from citizen message to fixed lamp','arch']
+};
+const NAVLBL={overview:'Overview',analyze:'Analyze',hotspots:'Hotspots',predict:'Predict',schedule:'Schedule',alerts:'Alerts',arch:'Design'};
+function renderNav(){
+  const n=alertCount();
+  $('#nav').innerHTML=Object.keys(PAGES).map(k=>`<button data-p="${k}" ${S.page===k?'aria-current="page"':''}>${ic(PAGES[k][2])}<span>${NAVLBL[k]}</span>${k==='alerts'&&n?`<span class="badge">${n}</span>`:''}</button>`).join('');
+  $$('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.p));
+}
+function go(p){
+  S.page=p;CHARTS.forEach(c=>c.destroy());CHARTS=[];
+  $('#pgTitle').textContent=PAGES[p][0];$('#pgSub').textContent=PAGES[p][1];
+  renderNav();({overview:pgOverview,analyze:pgAnalyze,hotspots:pgHotspots,predict:pgPredict,schedule:pgSchedule,alerts:pgAlerts,arch:pgArch})[p]();
+  window.scrollTo(0,0);
+}
+
+/* ───────────── overview ───────────── */
+function kpiHTML(){
+  const op=openT(),hi=op.filter(t=>t.sevLabel==='Critical'||t.sevLabel==='High'),now=Date.now();
+  const late=op.filter(t=>t.due<now&&t.status!=='resolved').length;
+  const total=S.lamps.length,bad=S.lamps.filter(l=>l.status!=='ok').length,online=Math.round((total-bad)/total*100);
+  const auto=S.tickets.filter(t=>t.conf>=.55&&t.zone).length,auto_p=Math.round(auto/Math.max(1,S.tickets.length)*100);
+  const hr=S.tickets.filter(t=>now-t.ts<36e5).length;
+  return `<div class="kpi"><span>Open tickets</span><b>${op.length}</b><small>${hr} in the last hour</small></div>
+  <div class="kpi"><span>Critical and high</span><b>${hi.length}</b><small>${late} already past SLA</small></div>
+  <div class="kpi"><span>Lamps working</span><b>${online}%</b><small>${bad} of ${total} faulty</small><div class="bar"><i style="width:${online}%;background:var(--ok)"></i></div></div>
+  <div class="kpi"><span>Triaged automatically</span><b>${auto_p}%</b><small>class and location found, no human</small></div>`;
+}
+function feedItem(t,isNew){
+  return `<button class="fi ${isNew?'new':''}" data-t="${t.id}"><div class="meta"><span class="ch">${t.channel}</span>${sevChip(t.sevLabel)}<span class="chip c-mute">${t.zone?ZM[t.zone].name:'Location unknown'}</span><span class="sub" style="margin-left:auto">${ago(t.ts)}</span></div><p>${esc(t.text)}</p><div class="meta"><span class="chip" style="background:${CLASSES[t.cls].color}22;color:${CLASSES[t.cls].color}">${CLASSES[t.cls].label}</span><span class="sub mono">${t.id}</span></div></button>`;
+}
+function feedHTML(){return S.tickets.filter(t=>t.status!=='resolved').slice(0,30).map((t,i)=>feedItem(t,S.lastNew===t.id)).join('')||'<div class="empty">No open complaints.</div>'}
+function bindFeed(){$$('#feed .fi').forEach(b=>b.onclick=()=>{const t=S.tickets.find(x=>x.id===b.dataset.t);S.an.text=t.text;S.an.ch=t.channel;go('analyze')})}
+function pgOverview(){
+  $('#view').innerHTML=`<div class="kpis" id="kpis">${kpiHTML()}</div>
+  <div class="grid main">
+   <div class="card pad0"><div class="chead"><div><h3>Live lamp map</h3><p class="sub">Hover a lamp for details, click to pin it</p></div>
+    <div class="seg" id="layerSeg">${[['lamps','Lamps'],['heat','Heat'],['clusters','Hotspots']].map(([k,l])=>`<button data-k="${k}" aria-pressed="${S.layers[k]}">${l}</button>`).join('')}</div></div>
+    <div class="mapwrap" id="ovMap"><div id="ovSvg">${mapSVG({layers:S.layers,id:'ov'})}</div><div class="tip"></div></div>${legend}</div>
+   <div class="card"><div class="row between"><div><h3>Incoming complaints</h3><p class="sub">Click one to see how it was read</p></div></div><div class="feed" id="feed">${feedHTML()}</div></div>
+  </div>
+  <div class="grid two">
+   <div class="card"><h3>Open faults by type</h3><p class="sub">Classified by the NLP model</p><div class="chartbox"><canvas id="cType" aria-label="Bar chart of open faults by type"></canvas></div></div>
+   <div class="card"><h3>Complaints per day</h3><p class="sub">Last 14 days across all channels</p><div class="chartbox"><canvas id="cDay" aria-label="Line chart of complaints per day"></canvas></div></div>
+  </div>`;
+  bindMap($('#ovMap'));bindFeed();
+  $$('#layerSeg button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;S.layers[k]=!S.layers[k];b.setAttribute('aria-pressed',S.layers[k]);$('#ovSvg').innerHTML=mapSVG({layers:S.layers,id:'ov'})});
+  drawOverviewCharts();
+}
+function typeData(){const c={};openT().forEach(t=>c[t.cls]=(c[t.cls]||0)+1);const k=Object.keys(c).sort((a,b)=>c[b]-c[a]);return {k,v:k.map(x=>c[x])}}
+function drawOverviewCharts(){
+  const d=typeData();
+  window.chType=mkChart($('#cType'),{type:'bar',data:{labels:d.k.map(k=>CLASSES[k].label),datasets:[{data:d.v,backgroundColor:d.k.map(k=>CLASSES[k].color),borderRadius:5,barThickness:16}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{precision:0}},y:{grid:{display:false}}}}});
+  const days=[...DAILY.slice(0,13),DAILY[13]+S.tickets.filter(t=>Date.now()-t.ts<864e5).length];
+  const labels=days.map((_,i)=>{const dt=new Date(Date.now()-(13-i)*864e5);return dt.toLocaleDateString('en-IN',{day:'numeric',month:'short'})});
+  mkChart($('#cDay'),{type:'line',data:{labels,datasets:[{data:days,borderColor:css('--lamp'),backgroundColor:css('--lamp')+'33',fill:true,tension:.35,pointRadius:2}]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:7}},y:{beginAtZero:true,ticks:{precision:0}}}}});
+}
+function updateLive(){
+  renderNav();
+  if(S.page==='overview'){
+    $('#kpis').innerHTML=kpiHTML();$('#feed').innerHTML=feedHTML();bindFeed();
+    $('#ovSvg').innerHTML=mapSVG({layers:S.layers,id:'ov'});
+    if(window.chType){const d=typeData();chType.data.labels=d.k.map(k=>CLASSES[k].label);chType.data.datasets[0].data=d.v;chType.data.datasets[0].backgroundColor=d.k.map(k=>CLASSES[k].color);chType.update()}
+  }else if(S.page==='alerts')pgAlerts();
+}
+
+/* ───────────── analyzer ───────────── */
+const SAMPLES=[
+ ['Flickering + safety','The light near SIES College Nerul keeps flickering on and off since 3 days. Students walk here at night, very unsafe.','WhatsApp'],
+ ['Exposed wire','Caller reports sparks and a wire hanging from the pole near Vashi Station!','Call centre'],
+ ['Hinglish','Kharghar Central Park ke paas 4 lights band hai, andhera hai. Please fix','WhatsApp'],
+ ['Hindi','नेरुल स्टेशन के पास स्ट्रीट लाइट बंद है, अंधेरा है','WhatsApp'],
+ ['Pole ID','SL-NER-021 not glowing near D Y Patil Stadium','Web portal'],
+ ['No location','Street light not working near the temple, please fix ASAP','Email']
+];
+function pgAnalyze(){
+  if(!S.an.text){S.an.text=SAMPLES[0][1];S.an.ch=SAMPLES[0][2]}
+  $('#view').innerHTML=`<div class="grid an" style="margin-top:0">
+   <div class="card"><h3>Incoming complaint</h3><p class="sub">Any channel goes through the same pipeline. Paste a message or pick an example.</p>
+    <div class="seg" id="chSeg" style="margin-top:12px">${CHANNELS.map(c=>`<button data-c="${c}" aria-pressed="${S.an.ch===c}">${c}</button>`).join('')}</div>
+    <textarea id="txt" aria-label="Complaint text" placeholder="Type or paste a complaint">${esc(S.an.text)}</textarea>
+    <div class="samples">${SAMPLES.map((s,i)=>`<button data-i="${i}">${s[0]}</button>`).join('')}</div>
+    <button class="btn primary" id="go">Analyze complaint</button></div>
+   <div class="card"><h3>Pipeline</h3><p class="sub">Six steps, run in order</p><ul class="steps" id="steps"></ul></div>
+  </div><div id="result"></div>`;
+  $$('#chSeg button').forEach(b=>b.onclick=()=>{S.an.ch=b.dataset.c;$$('#chSeg button').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+  $$('.samples button').forEach(b=>b.onclick=()=>{const s=SAMPLES[b.dataset.i];$('#txt').value=s[1];S.an.ch=s[2];$$('#chSeg button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.c===s[2]));run()});
+  $('#go').onclick=()=>run();
+  run(true);
+}
+let runTok=0;
+function run(fast){
+  const text=$('#txt').value.trim();if(!text){toast('Type a complaint first.');return}
+  S.an.text=text;const tok=++runTok,a=analyze(text);
+  const rows=[['Language detected',a.lang],['Fault type classified',`${CLASSES[a.cls].label} · ${Math.round(a.conf*100)}%`],['Entities extracted (NER)',`${a.ents.length} found`],['Severity scored',`${a.sev.label} · ${a.sev.score}/100`],['Location geocoded',a.geo?a.geo.zone.name:'Not found'],['Duplicate check',a.dup?'Match: '+a.dup.id:'New fault']];
+  const ul=$('#steps');ul.innerHTML=rows.map(r=>`<li><span class="tick"></span><b>${r[0]}</b><em></em></li>`).join('');
+  $('#result').innerHTML='';
+  const lis=$$('li',ul);
+  const step=i=>{
+    if(tok!==runTok)return;
+    if(i>=rows.length){showResult(a);return}
+    lis[i].classList.add('run');
+    setTimeout(()=>{if(tok!==runTok)return;lis[i].classList.remove('run');lis[i].classList.add('done');lis[i].querySelector('.tick').textContent='✓';lis[i].querySelector('em').textContent=rows[i][1];step(i+1)},fast?0:230);
+  };
+  step(0);
+}
+function gauge(a){
+  const c=a.sev.label==='Critical'?'var(--bad)':a.sev.label==='High'?'var(--warn)':a.sev.label==='Medium'?'var(--lamp)':'var(--ok)',L=169.6;
+  return `<svg viewBox="0 0 140 84" width="190" role="img" aria-label="Severity ${a.sev.score} out of 100"><path d="M16 70A54 54 0 0 1 124 70" fill="none" stroke="var(--surface2)" stroke-width="12" stroke-linecap="round"/><path d="M16 70A54 54 0 0 1 124 70" fill="none" stroke="${c}" stroke-width="12" stroke-linecap="round" stroke-dasharray="${L}" stroke-dashoffset="${(L*(1-a.sev.score/100)).toFixed(1)}"/><text x="70" y="62" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="30" font-weight="700" fill="var(--ink)">${a.sev.score}</text><text x="70" y="80" text-anchor="middle" font-size="12" fill="var(--muted)">out of 100</text></svg>`;
+}
+function hl(t,ents){let o='',p=0;const S_={POLE_ID:'POLE',LOCATION:'LOC',LANDMARK:'LMK',DURATION:'TIME',FAULT:'FAULT'};for(const e of ents){o+=esc(t.slice(p,e.s))+`<mark class="ent e-${e.label}" title="${e.label}">${esc(e.text)}<small>${S_[e.label]}</small></mark>`;p=e.e}return o+esc(t.slice(p))}
+function showResult(a){
+  const cl=CLASSES[a.cls],due=SLA[a.sev.label],g=a.geo;
+  const ref=a.dup?a.dup.id:'TKT-'+S.seq;
+  const reply=g?`Thank you. We logged your report near ${g.zone.name} as ${ref} (${a.sev.label.toLowerCase()} priority). A crew will visit within ${due} hours. We will message you once it is fixed.`:`Thank you. We could not tell where the light is. Please reply with a nearby landmark or share your WhatsApp location pin so we can send a crew.`;
+  $('#result').innerHTML=`<div class="grid two">
+   <div class="card"><h3>Entities found in the message</h3><p class="sub">Named Entity Recognition tags each phrase the crew needs</p>
+     <div class="hltext">${hl(a.text,a.ents)}</div>
+     <div class="row wrap" style="gap:6px;margin-top:6px">${['POLE_ID','LOCATION','LANDMARK','DURATION','FAULT'].map(k=>`<mark class="ent e-${k}" style="font-size:12px">${k}</mark>`).join('')}</div></div>
+   <div class="card"><h3>Severity</h3><p class="sub">Rule-weighted score using danger words, place, people at risk and how long it has been faulty</p>
+     <div class="row wrap" style="gap:16px;align-items:center">${gauge(a)}<div>${sevChip(a.sev.label)}<div class="sub" style="margin-top:6px">Fix within ${due} hours</div></div></div>
+     <ul class="why">${a.sev.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul></div>
+  </div>
+  <div class="grid two">
+   <div class="card"><h3>Fault type</h3><p class="sub">Model confidence across all eight classes</p>
+     ${a.probs.slice(0,4).map(p=>`<div class="prob"><span>${CLASSES[p.k].label}</span><div class="bar"><i style="width:${Math.max(3,p.p*100).toFixed(0)}%;background:${CLASSES[p.k].color}"></i></div><span class="mono">${Math.round(p.p*100)}%</span></div>`).join('')}
+     ${a.conf<.55?'<div class="note warn">Confidence is below 55%, so this ticket goes to a human for review.</div>':''}
+     ${a.dup?`<div class="note info">This lamp already has an open ticket (${a.dup.id}). The new report is added to it as another citizen confirmation instead of a second work order.</div>`:''}</div>
+   <div class="card pad0"><div class="chead"><div><h3>Location</h3><p class="sub">${g?esc(g.by)+' · confidence '+Math.round(g.conf*100)+'%':'No place name, landmark or pole ID found'}</p></div>${g?`<span class="chip c-low">${a.lamp?a.lamp.id:g.zone.name}</span>`:'<span class="chip c-high">Needs review</span>'}</div>
+     <div class="mapwrap"><div>${mapSVG({id:'an',layers:{heat:false,lamps:true,clusters:false},mark:g?{x:a.lamp?a.lamp.x:g.x,y:a.lamp?a.lamp.y:g.y}:null})}</div></div></div>
+  </div>
+  <div class="card" style="margin-top:14px"><div class="row between wrap"><h3>Recommended action</h3><div class="row"><button class="btn" id="review">Send to human review</button><button class="btn primary" id="mk">${a.dup?'Add to existing ticket':g?'Create ticket':'Create ticket for review'}</button></div></div>
+   <dl class="kv"><dt>Department</dt><dd>${cl.dept}</dd><dt>Crew needed</dt><dd>${cl.crew}</dd><dt>Likely parts</dt><dd>${cl.parts}</dd><dt>Repair time</dt><dd>About ${cl.mins} minutes on site</dd><dt>Auto-reply</dt><dd><div class="reply" style="margin:0">${esc(reply)}</div></dd></dl></div>`;
+  $('#mk').onclick=()=>{
+    if(a.dup){a.dup.reports=(a.dup.reports||1)+1;toast(`Added to ${a.dup.id} (${a.dup.reports} citizen reports).`);return}
+    const t=makeTicket(a,S.an.ch);renderNav();toast(`${t.id} created · ${cl.label} · ${t.sevLabel}`);$('#mk').disabled=true;$('#mk').textContent='Ticket created';
+  };
+  $('#review').onclick=()=>toast('Sent to the control-room review queue.');
+}
+
+/* ───────────── hotspots ───────────── */
+function pgHotspots(){
+  const st=zoneStats().sort((a,b)=>b.open-a.open||b.f90-a.f90),cl=clusters(),mx=Math.max(...st.map(s=>s.f90),1);
+  $('#view').innerHTML=`<div class="grid main" style="margin-top:0">
+   <div class="card pad0"><div class="chead"><div><h3>Fault density</h3><p class="sub">Clusters are found by grouping faulty lamps within 60 map units (DBSCAN-style)</p></div>
+    <div class="seg" id="hSeg">${[['open','Open faults'],['recurring','Repeat failures'],['risk','Predicted risk']].map(([k,l])=>`<button data-k="${k}" aria-pressed="${S.hmode===k}">${l}</button>`).join('')}</div></div>
+    <div class="mapwrap" id="hMap"><div id="hSvg">${mapSVG({id:'hs',hmode:S.hmode,layers:{heat:true,lamps:true,clusters:S.hmode==='open'}})}</div><div class="tip"></div></div>${legend}</div>
+   <div class="stack"><div class="card"><h3>Zones ranked</h3><p class="sub">By open faults, then 90-day repeats</p>
+    <table style="margin-top:8px"><thead><tr><th>Zone</th><th>Open</th><th>Repeats</th></tr></thead><tbody>${st.map(s=>`<tr><td><b>${s.z.name}</b><div class="sub">${s.n} lamps</div></td><td>${s.open}</td><td><div class="row"><div class="bar" style="flex:1"><i style="width:${s.f90/mx*100}%"></i></div><span class="mono">${s.f90}</span></div></td></tr>`).join('')}</tbody></table></div>
+    <div class="card"><h3>Hotspot clusters</h3><p class="sub">Send one crew per cluster instead of one per complaint</p>
+     ${cl.length?cl.map(c=>`<div class="row between" style="padding:9px 0;border-top:1px solid var(--line)"><span><b>Near ${c.zone.name}</b><span class="sub"> · radius ${Math.round(c.r*.026*1000)} m</span></span><span class="chip c-high">${c.n} faults</span></div>`).join(''):'<div class="empty">No clusters right now.</div>'}</div></div>
+  </div>`;
+  bindMap($('#hMap'));
+  $$('#hSeg button').forEach(b=>b.onclick=()=>{S.hmode=b.dataset.k;pgHotspots()});
+}
+
+/* ───────────── predictions ───────────── */
+function pgPredict(){
+  const hi=S.lamps.filter(l=>l.risk>=.55).sort((a,b)=>b.risk-a.risk),top=S.lamps.slice().sort((a,b)=>b.risk-a.risk).slice(0,10);
+  const next=WEEKLY.fcst[0]+WEEKLY.fcst[1],band=Math.round((WEEKLY.hi[0]+WEEKLY.hi[1]-WEEKLY.lo[0]-WEEKLY.lo[1])/2);
+  $('#view').innerHTML=`<div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+   <div class="kpi"><span>Expected faults, next 14 days</span><b>${next}</b><small>plus or minus ${band}</small></div>
+   <div class="kpi"><span>Lamps above 55% failure risk</span><b>${hi.length}</b><small>of ${S.lamps.length} monitored</small></div>
+   <div class="kpi"><span>Model check on held-out weeks</span><b>0.91</b><small>AUC · sample value, synthetic data</small></div></div>
+  <div class="grid main"><div class="card"><h3>Weekly faults: history and forecast</h3><p class="sub">Shaded band is the 80% prediction interval</p><div class="chartbox" style="height:280px"><canvas id="cF" aria-label="Weekly fault forecast"></canvas></div></div>
+   <div class="card"><h3>What drives failures</h3><p class="sub">Feature importance from the gradient-boosted model</p><div class="chartbox" style="height:280px"><canvas id="cI" aria-label="Feature importance"></canvas></div></div></div>
+  <div class="card" style="margin-top:14px"><div class="row between wrap"><div><h3>Lamps most likely to fail in the next 14 days</h3><p class="sub">Checking these before they fail avoids an emergency visit later</p></div></div>
+   <div style="overflow:auto"><table style="margin-top:8px"><thead><tr><th>Lamp</th><th>Zone</th><th>Age</th><th>Risk</th><th>Main reason</th><th></th></tr></thead><tbody>${top.map(l=>`<tr><td class="mono">${l.id}</td><td>${ZM[l.zone].name}</td><td>${l.age} y</td><td><div class="row"><div class="bar" style="flex:1"><i style="width:${l.risk*100}%;background:${l.risk>.6?'var(--bad)':'var(--lamp)'}"></i></div><span class="mono">${Math.round(l.risk*100)}%</span></div></td><td>${l.reason}</td><td><button class="btn small" data-l="${l.id}" ${S.prev.has(l.id)?'disabled':''}>${S.prev.has(l.id)?'Added':'Add to preventive round'}</button></td></tr>`).join('')}</tbody></table></div></div>`;
+  $$('button[data-l]').forEach(b=>b.onclick=()=>{S.prev.add(b.dataset.l);b.disabled=true;b.textContent='Added';toast(`${b.dataset.l} added to the preventive round.`)});
+  const wk=[...Array(18)].map((_,i)=>i<12?`W-${12-i}`:`W+${i-11}`),n=12;
+  const pad=(arr,off)=>[...Array(off).fill(null),...arr];
+  mkChart($('#cF'),{type:'line',data:{labels:wk,datasets:[
+    {label:'Low',data:pad([WEEKLY.actual[11],...WEEKLY.lo],11),borderWidth:0,pointRadius:0,fill:false},
+    {label:'High',data:pad([WEEKLY.actual[11],...WEEKLY.hi],11),borderWidth:0,pointRadius:0,fill:'-1',backgroundColor:css('--lamp')+'30'},
+    {label:'Forecast',data:pad([WEEKLY.actual[11],...WEEKLY.fcst],11),borderColor:css('--lamp'),borderDash:[6,4],pointRadius:0,tension:.3},
+    {label:'Actual',data:[...WEEKLY.actual],borderColor:css('--info'),pointRadius:2,tension:.3}]},
+   options:{plugins:{legend:{labels:{filter:i=>i.text==='Actual'||i.text==='Forecast',usePointStyle:true}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:9}},y:{beginAtZero:true}}}});
+  mkChart($('#cI'),{type:'bar',data:{labels:FEAT.map(f=>f[0]),datasets:[{data:FEAT.map(f=>f[1]),backgroundColor:css('--info'),borderRadius:5,barThickness:14}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{callback:v=>Math.round(v*100)+'%'}},y:{grid:{display:false}}}}});
+}
+
+/* ───────────── scheduling ───────────── */
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),KM=.026;
+const prio=t=>t.sev+Math.min(40,(Date.now()-t.ts)/36e5*1.2);
+function buildSchedule(mode){
+  const open=S.tickets.filter(t=>t.status==='open'&&t.x!=null);
+  const techs=TECHS.map(t=>({...t,jobs:[]})),cap=8,deferred=[];
+  if(mode==='manual'){
+    open.slice().sort((a,b)=>a.ts-b.ts).forEach((t,i)=>{const T=techs[i%techs.length];T.jobs.length<cap?T.jobs.push(t):deferred.push(t)});
+  }else{
+    open.slice().sort((a,b)=>prio(b)-prio(a)).forEach(t=>{
+      let best=null,bc=1e9;
+      techs.forEach(T=>{if(T.jobs.length>=cap||(t.cls==='hazard'&&!T.hv))return;
+        const c=.7*dist(T.depot,t)+.3*Math.min(dist(T.depot,t),...T.jobs.map(j=>dist(j,t)))+T.jobs.length*9;if(c<bc){bc=c;best=T}});
+      best?best.jobs.push(t):deferred.push(t);
+    });
+    techs.forEach(T=>{const left=T.jobs.slice(),ord=[];let cur=T.depot;
+      const tier=j=>j.sevLabel==='Critical'?0:j.sevLabel==='High'?1:2;
+      while(left.length){const tmin=Math.min(...left.map(tier));let bi=-1,bv=1e9;left.forEach((j,i)=>{if(tier(j)!==tmin)return;const v=dist(cur,j);if(v<bv){bv=v;bi=i}});const j=left.splice(bi,1)[0];ord.push(j);cur=j}
+      T.jobs=ord});
+  }
+  let km=0,hiSum=0,hiN=0,mism=0;
+  techs.forEach(T=>{
+    let cur=T.depot,clock=540;T.km=0;T.etas=[];
+    T.jobs.forEach(j=>{const d=dist(cur,j)*KM;T.km+=d;clock+=d/22*60;T.etas.push(clock);
+      if(j.sevLabel==='Critical'||j.sevLabel==='High'){hiSum+=clock;hiN++}
+      if(j.cls==='hazard'&&!T.hv)mism++;clock+=CLASSES[j.cls].mins;cur=j});
+    if(T.jobs.length)T.km+=dist(cur,T.depot)*KM;km+=T.km;
+  });
+  return {techs,km,hiAvg:hiN?hiSum/hiN:null,planned:techs.reduce((a,T)=>a+T.jobs.length,0),deferred,mism};
+}
+function pgSchedule(){
+  const open=S.tickets.filter(t=>t.status==='open'&&t.x!=null).length,asg=S.tickets.filter(t=>t.status==='assigned').length;
+  if(!open&&!asg){$('#view').innerHTML=`<div class="card empty"><h3>No open tickets to schedule</h3><p>New complaints will show up here as they arrive.</p><button class="btn primary" id="rs">Reload demo data</button></div>`;$('#rs').onclick=()=>{initData();go('schedule')};return}
+  const man=buildSchedule('manual'),opt=buildSchedule('opt'),cur=S.mode==='opt'?opt:man;
+  const pct=man.km?Math.round((1-opt.km/man.km)*100):0;
+  $('#view').innerHTML=`<div class="card"><div class="row between wrap"><div><h3>Shift plan</h3><p class="sub">${open} open tickets · ${TECHS.length} crews · up to 8 jobs each · shift starts 9:00 AM</p></div>
+    <div class="row wrap"><div class="seg" id="mSeg"><button data-m="manual" aria-pressed="${S.mode==='manual'}">Manual (first come, first served)</button><button data-m="opt" aria-pressed="${S.mode==='opt'}">Optimized</button></div>
+    <button class="btn primary" id="disp" ${open?'':'disabled'}>Dispatch optimized plan</button>${asg?'<button class="btn" id="done">Simulate shift completion</button>':''}</div></div>
+    <table class="cmp" style="margin-top:10px"><thead><tr><th></th><th>Manual</th><th>Optimized</th></tr></thead><tbody>
+     <tr><td>Travel distance</td><td>${man.km.toFixed(1)} km</td><td>${opt.km.toFixed(1)} km${pct>0?` <span class="good">−${pct}%</span>`:''}</td></tr>
+     <tr><td>Critical and high jobs reached by (average)</td><td>${man.hiAvg?fmtClock(man.hiAvg):'–'}</td><td>${opt.hiAvg?fmtClock(opt.hiAvg):'–'}</td></tr>
+     <tr><td>Hazard jobs given to an uncertified crew</td><td>${man.mism}</td><td>${opt.mism}</td></tr>
+     <tr><td>Jobs planned / deferred to next shift</td><td>${man.planned} / ${man.deferred.length}</td><td>${opt.planned} / ${opt.deferred.length}</td></tr></tbody></table></div>
+   <div class="grid main"><div class="card pad0"><div class="chead"><div><h3>Routes</h3><p class="sub">${S.mode==='opt'?'Optimized':'Manual'} plan · numbers show visit order</p></div></div>
+     <div class="mapwrap" id="sMap"><div>${mapSVG({id:'sc',layers:{heat:false,lamps:true,clusters:false},routes:cur.techs.map(T=>({name:T.name,color:T.color,depot:T.depot,jobs:T.jobs}))})}</div><div class="tip"></div></div>${legend}</div>
+    <div class="stack">${cur.techs.map(T=>`<div class="card tech" style="--c:${T.color}"><div class="row between"><div><b>${T.name}</b><div class="sub">${T.skill} · from ${T.depot.zone}</div></div><span class="chip c-mute">${T.jobs.length} jobs · ${T.km.toFixed(1)} km</span></div>
+      <ol>${T.jobs.map((j,i)=>`<li><span class="n">${i+1}</span><span>${CLASSES[j.cls].label} <span class="sub">· ${j.zone?ZM[j.zone].name:''} · <span class="mono">${j.id}</span></span></span><span class="row" style="gap:6px">${sevChip(j.sevLabel)}<span class="mono">${fmtClock(T.etas[i])}</span></span></li>`).join('')||'<li style="grid-template-columns:1fr">No jobs assigned</li>'}</ol></div>`).join('')}
+     ${cur.deferred.length?`<div class="note warn">${cur.deferred.length} lower-priority tickets are deferred to the next shift because every crew is full.</div>`:''}</div></div>`;
+  bindMap($('#sMap'));
+  $$('#mSeg button').forEach(b=>b.onclick=()=>{S.mode=b.dataset.m;pgSchedule()});
+  $('#disp').onclick=()=>{
+    opt.techs.forEach(T=>T.jobs.forEach((j,i)=>{const t=S.tickets.find(k=>k.id===j.id);t.status='assigned';t.tech=T.name;t.eta=T.etas[i];const l=LMAP.get(t.lampId);if(l)l.status='assigned'}));
+    toast(`${opt.planned} jobs sent to ${opt.techs.filter(T=>T.jobs.length).length} crews.`);renderNav();pgSchedule();
+  };
+  if($('#done'))$('#done').onclick=()=>{
+    S.tickets.filter(t=>t.status==='assigned').forEach(t=>{t.status='resolved';const l=LMAP.get(t.lampId);if(l){l.status='ok';l.f90++}});
+    toast('Shift complete. Assigned lamps are back online.');renderNav();pgSchedule();
+  };
+}
+
+/* ───────────── alerts ───────────── */
+function computeAlerts(){
+  const A=[],now=Date.now(),op=S.tickets.filter(t=>t.status==='open');
+  op.filter(t=>t.sevLabel==='Critical').slice(0,6).forEach(t=>A.push({key:'c'+t.id,lvl:'Critical',title:`${CLASSES[t.cls].label} in ${ZM[t.zone].name}`,detail:`${t.id} · reported ${ago(t.ts)} via ${t.channel}. Crew needed: ${CLASSES[t.cls].crew}.`,go:'schedule',cta:'Plan crew'}));
+  const late=op.filter(t=>t.due<now);if(late.length)A.push({key:'late'+late.length,lvl:'High',title:`${late.length} tickets are past their SLA`,detail:`Oldest: ${late.sort((a,b)=>a.due-b.due)[0].id}, ${ago(late[0].ts)}.`,go:'schedule',cta:'Plan crew'});
+  const soon=op.filter(t=>t.due>=now&&t.due-now<2*36e5);if(soon.length)A.push({key:'soon'+soon.length,lvl:'Medium',title:`${soon.length} tickets reach their SLA within 2 hours`,detail:'Assign them before the deadline passes.',go:'schedule',cta:'Plan crew'});
+  clusters().filter(c=>c.n>=4).forEach(c=>A.push({key:'h'+c.zone.id+c.n,lvl:'High',title:`Hotspot near ${c.zone.name}: ${c.n} faulty lamps`,detail:'Likely a shared cause such as a feeder or MCB. One inspection may clear several tickets.',go:'hotspots',cta:'See hotspot'}));
+  zoneStats().sort((a,b)=>b.risk-a.risk).slice(0,2).forEach(z=>A.push({key:'r'+z.z.id,lvl:'Medium',title:`${z.z.name} has a high predicted failure risk`,detail:`Average 14-day risk ${Math.round(z.risk*100)}% across ${z.n} lamps. Consider a preventive round.`,go:'predict',cta:'See predictions'}));
+  const rev=S.tickets.filter(t=>t.status==='review');if(rev.length)A.push({key:'rev'+rev.length,lvl:'Low',title:`${rev.length} complaint${rev.length>1?'s':''} without a usable location`,detail:'An automatic reply asked the citizen for a landmark or WhatsApp pin.',go:'analyze',cta:'Open analyzer'});
+  const o={Critical:0,High:1,Medium:2,Low:3};return A.sort((a,b)=>o[a.lvl]-o[b.lvl]);
+}
+const alertCount=()=>computeAlerts().filter(a=>(a.lvl==='Critical'||a.lvl==='High')&&!S.ack.has(a.key)).length;
+function pgAlerts(){
+  const A=computeAlerts();
+  $('#view').innerHTML=`<div class="card pad0"><div class="chead"><div><h3>${A.filter(a=>!S.ack.has(a.key)).length} need attention</h3><p class="sub">Alerts are recalculated whenever a ticket, lamp or forecast changes</p></div>
+   <button class="btn small" id="ackAll">Acknowledge all</button></div>
+   ${A.map(a=>`<div class="alert ${S.ack.has(a.key)?'ack':''}"><span class="chip ${sevCls(a.lvl)}">${a.lvl}</span><div><h4>${esc(a.title)}</h4><p>${esc(a.detail)}</p></div><div class="row"><button class="btn small" data-g="${a.go}">${a.cta}</button><button class="btn small" data-k="${a.key}" ${S.ack.has(a.key)?'disabled':''}>Acknowledge</button></div></div>`).join('')||'<div class="empty">Nothing needs attention.</div>'}</div>
+   <div class="grid three"><div class="card"><h3>Critical fault</h3><p class="sub">Severity 75 or more, for example exposed wiring. Alerts immediately.</p></div>
+   <div class="card"><h3>SLA at risk</h3><p class="sub">Fires when a ticket is past or within two hours of its response target.</p></div>
+   <div class="card"><h3>Hotspot or forecast</h3><p class="sub">Four or more faults in one cluster, or a zone with high predicted failures.</p></div></div>`;
+  $$('button[data-g]').forEach(b=>b.onclick=()=>go(b.dataset.g));
+  $$('button[data-k]').forEach(b=>b.onclick=()=>{S.ack.add(b.dataset.k);renderNav();pgAlerts()});
+  $('#ackAll').onclick=()=>{A.forEach(a=>S.ack.add(a.key));renderNav();pgAlerts()};
+}
+
+/* ───────────── architecture ───────────── */
+function pgArch(){
+  const tag=(t,c='c-mute')=>`<span class="chip ${c}">${t}</span>`;
+  $('#view').innerHTML=`<div class="flow" style="margin-top:0">
+   <div class="stage"><h3>1. Collect</h3><ul><li>WhatsApp bot</li><li>Web portal form</li><li>Call-centre transcripts</li><li>X / Twitter mentions</li><li>Email inbox</li></ul></div>
+   <div class="stage"><h3>2. Understand</h3><ul><li>Language detection (English, Hindi, Marathi, Hinglish)</li><li>Fault classification into 8 types</li><li>NER: location, landmark, pole ID, duration</li><li>Severity scoring</li></ul></div>
+   <div class="stage"><h3>3. Locate</h3><ul><li>Geocode landmark or pole ID</li><li>Snap to nearest lamp in GIS</li><li>Duplicate detection per lamp</li></ul></div>
+   <div class="stage"><h3>4. Predict and decide</h3><ul><li>Hotspot clustering (DBSCAN)</li><li>14-day failure prediction</li><li>Weekly fault forecast</li><li>Crew routing with priority and skill limits</li></ul></div>
+   <div class="stage"><h3>5. Act</h3><ul><li>Live dashboard and map</li><li>Alerts for critical and SLA risk</li><li>Crew app dispatch</li><li>Automatic reply to citizen</li></ul></div></div>
+  <div class="grid two">
+   <div class="card"><h3>Objective coverage</h3><p class="sub">Each line of the problem statement, and where it lives in this prototype</p>
+    <table style="margin-top:8px"><tbody>
+     <tr><td>Collect requests from many channels</td><td>${tag('Overview feed','c-info')}</td></tr>
+     <tr><td>Classify fault types</td><td>${tag('Analyzer','c-info')}</td></tr>
+     <tr><td>Extract locations with NER</td><td>${tag('Analyzer','c-info')}</td></tr>
+     <tr><td>Assess severity</td><td>${tag('Analyzer','c-info')}</td></tr>
+     <tr><td>Identify maintenance hotspots</td><td>${tag('Hotspots','c-info')}</td></tr>
+     <tr><td>Predict recurring failures</td><td>${tag('Predict','c-info')}</td></tr>
+     <tr><td>Optimize technician scheduling</td><td>${tag('Schedule','c-info')}</td></tr>
+     <tr><td>Real-time dashboards with alerts</td><td>${tag('Overview + Alerts','c-info')}</td></tr></tbody></table></div>
+   <div class="stack"><div class="card"><h3>Suggested stack</h3><p class="sub">What the trained version of each step could use</p>
+     <div class="tags">${['spaCy / MuRIL NER','DistilBERT classifier','XGBoost','DBSCAN','OR-Tools VRP','PostGIS','FastAPI','WebSockets','React + MapLibre'].map(t=>tag(t)).join('')}</div></div>
+    <div class="card"><h3>About this prototype</h3><p class="sub" style="line-height:1.6">Group 6 · SDG 11, Sustainable Cities and Communities. Team: Gregory, Bharath Rathinasabapathy, Harshwardhan Ahire.</p>
+     <div class="note info">The classifier, NER and severity score in this page are rule-based so the demo runs in the browser. Lamps, tickets, forecast values and the model metric are synthetic. Replace them with your trained model outputs and real data before reporting results.</div></div></div>
+  </div>`;
+}
+
+/* ───────────── live simulation + boot ───────────── */
+const POOL=[
+ ['WhatsApp','Light not working near SIES College Nerul since 3 days. Students walk here at night, very unsafe.'],
+ ['X / Twitter','Streetlight flickering on Palm Beach Road, Sanpada. Dangerous for bikers!'],
+ ['Call centre','Caller reports sparks and a wire hanging from the pole near Vashi Station.'],
+ ['Web portal','Streetlights in Sector 17 Kharghar are burning in the daytime.'],
+ ['WhatsApp','Kharghar Central Park ke paas 4 lights band hai, andhera hai. Please fix'],
+ ['Email','Entire lane behind Inorbit Mall Vashi is dark for a week. Multiple lamps not working.'],
+ ['WhatsApp','नेरुल स्टेशन के पास स्ट्रीट लाइट बंद है, अंधेरा है'],
+ ['Web portal','Street light pole near Airoli Bridge is leaning after the rain. Pole no. 214.'],
+ ['X / Twitter','Cable stolen from lamp post near Seawoods Grand Central. Light is not working.'],
+ ['Call centre','Lights near Belapur Station are very dim, hardly visible at night.'],
+ ['Email','Timer issue: streetlights near Ghansoli Station not switching on in the evening.'],
+ ['WhatsApp','Street light not working near the temple, please fix ASAP']
+];
+let poolI=0;
+function liveTick(){
+  if(!S.live)return;
+  const [ch,text]=POOL[poolI++%POOL.length],a=analyze(text);
+  if(a.dup){a.dup.reports=(a.dup.reports||1)+1;toast(`${ch}: merged into ${a.dup.id} (${a.dup.reports} reports)`);return}
+  const t=makeTicket(a,ch);S.lastNew=t.id;
+  toast(`${ch}: ${CLASSES[t.cls].label}${t.zone?' · '+ZM[t.zone].name:' · location unknown'} · ${t.sevLabel}`);
+  updateLive();
+}
+function setTheme(t){
+  S.theme=t;document.documentElement.setAttribute('data-theme',t);
+  $('#themeBtn').innerHTML=ic(t==='dark'?'sun':'moon');
+}
+$('#themeBtn').onclick=()=>{setTheme(S.theme==='dark'?'light':'dark');go(S.page)};
+$('#liveBtn').onclick=()=>{S.live=!S.live;$('#liveBtn').setAttribute('aria-pressed',S.live);$('#liveBtn').classList.toggle('off',!S.live);$('#liveTxt').textContent=S.live?'Live intake':'Intake paused'};
+$('#reset').onclick=()=>{initData();S.an.text='';poolI=0;go('overview');toast('Demo data reset.')};
+initData();
+setTheme(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+go('overview');
+setInterval(liveTick,11000);
+</script>
+</body>
+</html>
