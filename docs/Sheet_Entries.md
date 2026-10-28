@@ -16,4 +16,4 @@ Copy each answer into the matching column.
 
 ## Files to upload to the CEP folder
 * **PPT:** `Prakash_Presentation (1).pptx`
-* **Project report:** `docs/Prakash_Project_Report.docx` (PDF copy: `docs/Prakash_Project_Report.pdf`)
+* **Project report:** `docs/Prakash_Project_Report.docx` (PDF copy: `docs/Group 6.pdf`)
